@@ -1,0 +1,103 @@
+version: '3.8'
+
+services:
+
+  # -------- ZOOKEEPER A --------
+  zookeeper-a:
+    image: confluentinc/cp-zookeeper:7.5.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  # -------- KAFKA A (3 brokers) --------
+  kafka-a1:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on: [zookeeper-a]
+    ports: ["9092:9092"]
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-a:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+
+  kafka-a2:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on: [zookeeper-a]
+    ports: ["9094:9094"]
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-a:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9094
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9094
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+
+  kafka-a3:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on: [zookeeper-a]
+    ports: ["9095:9095"]
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-a:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9095
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9095
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+
+  # -------- ZOOKEEPER B --------
+  zookeeper-b:
+    image: confluentinc/cp-zookeeper:7.5.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2182
+
+  # -------- KAFKA B (3 brokers) --------
+  kafka-b1:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on: [zookeeper-b]
+    ports: ["9096:9096"]
+    environment:
+      KAFKA_BROKER_ID: 4
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-b:2182
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9096
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9096
+
+  kafka-b2:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on: [zookeeper-b]
+    ports: ["9097:9097"]
+    environment:
+      KAFKA_BROKER_ID: 5
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-b:2182
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9097
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9097
+
+  kafka-b3:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on: [zookeeper-b]
+    ports: ["9098:9098"]
+    environment:
+      KAFKA_BROKER_ID: 6
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-b:2182
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9098
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9098
+
+  # -------- MIRRORMAKER 2 --------
+  mirrormaker:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on:
+      - kafka-a1
+      - kafka-b1
+    volumes:
+      - ./mm2.properties:/etc/kafka/mm2.properties
+    command: >
+      bash -c "connect-mirror-maker /etc/kafka/mm2.properties"
+
+  # -------- MYSQL (3307 on host) --------
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: kafka_db
+    ports:
+      - "3307:3306"
